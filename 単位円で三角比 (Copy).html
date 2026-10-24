@@ -1,0 +1,455 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>単位円で三角比 (Copy)</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 方眼紙の上に単位円、その真下に値カード。1カラム・中央寄せ、最大幅560px */
+:root{
+  --paper:#f6f8fb;
+  --surface:#ffffff;
+  --grid:#dfe6ef;
+  --grid-strong:#c5d0de;
+  --ink:#1d2a3a;
+  --muted:#5f6f82;
+  --line:#d6dee8;
+  --sin:#d23c3c;
+  --cos:#2463c9;
+  --tan:#1f8a55;
+  --point:#e08a00;
+  --sin-bg:#fbeaea;
+  --cos-bg:#e8effb;
+  --tan-bg:#e6f4ec;
+  --font-ui:"BIZ UDPGothic", "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
+  --font-math:"STIX Two Text", "Times New Roman", "Hiragino Mincho ProN", serif;
+  --font-num:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#141b25; --surface:#1b2431; --grid:#212c3a; --grid-strong:#2e3b4d;
+    --ink:#e6edf5; --muted:#9aa9bb; --line:#2c394a;
+    --sin:#ff7a7a; --cos:#74a7ff; --tan:#5fd39a; --point:#ffb547;
+    --sin-bg:#3a2226; --cos-bg:#1d2b45; --tan-bg:#183328;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141b25; --surface:#1b2431; --grid:#212c3a; --grid-strong:#2e3b4d;
+  --ink:#e6edf5; --muted:#9aa9bb; --line:#2c394a;
+  --sin:#ff7a7a; --cos:#74a7ff; --tan:#5fd39a; --point:#ffb547;
+  --sin-bg:#3a2226; --cos-bg:#1d2b45; --tan-bg:#183328;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:var(--font-ui); font-size:15px; line-height:1.6;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:20px 32px;
+}
+.wrap{max-width:560px; margin:0 auto; display:flex; flex-direction:column; gap:16px}
+header{display:flex; flex-direction:column; gap:4px}
+h1{font-size:1.35rem; margin:0; text-wrap:balance; letter-spacing:.02em}
+.lead{margin:0; color:var(--muted); font-size:.9rem}
+
+.controls{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between}
+.seg{display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--surface)}
+.seg button{
+  font:inherit; font-size:.85rem; border:0; background:transparent; color:var(--muted);
+  padding:6px 12px; cursor:pointer; border-right:1px solid var(--line);
+}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--paper); font-weight:700}
+.seg button:focus-visible{outline:2px solid var(--point); outline-offset:-2px}
+.ctl-label{font-size:.75rem; color:var(--muted); letter-spacing:.06em; margin-right:6px}
+.sound{display:inline-flex; align-items:center; gap:6px; font-size:.85rem; color:var(--muted); cursor:pointer}
+.sound input{accent-color:var(--point); width:16px; height:16px}
+
+.stage{
+  background:var(--surface); border:1px solid var(--line); border-radius:12px;
+  padding:8px;
+}
+svg#circle{display:block; width:100%; height:auto; max-width:100%; touch-action:none; user-select:none; -webkit-user-select:none; cursor:crosshair}
+svg text{font-family:var(--font-math)}
+#handle{cursor:grab; outline:none}
+#handle:focus-visible .focus{stroke:var(--point); stroke-width:2; opacity:1}
+.dragging #handle{cursor:grabbing}
+#pulse{opacity:0; transform-box:fill-box; transform-origin:center}
+#pulse.go{animation:pulse .45s ease-out}
+@keyframes pulse{0%{opacity:.9; transform:scale(1)} 100%{opacity:0; transform:scale(2.6)}}
+
+.readout{display:flex; flex-direction:column; gap:10px}
+.angle-row{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px;
+  background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 16px;
+}
+.angle-main{font-family:var(--font-math); font-size:1.6rem; font-variant-numeric:tabular-nums}
+.angle-main i{font-style:italic}
+.angle-rad{font-family:var(--font-math); font-size:1.1rem; color:var(--muted)}
+.badge{
+  margin-left:auto; font-size:.75rem; font-weight:700; letter-spacing:.08em;
+  padding:3px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted);
+}
+.badge.on{background:var(--point); border-color:var(--point); color:#1d1606}
+
+.vals{display:grid; grid-template-columns:1fr; gap:8px}
+.val{
+  display:grid; grid-template-columns:4.6rem 1fr auto; align-items:center; gap:4px 12px;
+  background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px 16px;
+  border-left:5px solid var(--c);
+}
+.val .name{font-family:var(--font-math); font-size:1.3rem; color:var(--c); font-weight:600}
+.val .name i{font-style:italic; font-weight:400}
+.val .exact{font-family:var(--font-math); font-size:1.4rem; min-height:2.2rem; display:flex; align-items:center}
+.val .dec{font-family:var(--font-num); font-variant-numeric:tabular-nums; font-size:1.05rem; text-align:right}
+.val .hint{grid-column:1 / -1; font-size:.8rem; color:var(--muted)}
+.val.sin{--c:var(--sin)} .val.cos{--c:var(--cos)} .val.tan{--c:var(--tan)}
+.muted{color:var(--muted)}
+
+.frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.05; margin:0 .1em; font-size:.85em}
+.frac > span:first-child{border-bottom:1.5px solid currentColor; padding:0 .2em}
+.frac > span:last-child{padding:0 .2em}
+.sign{margin-right:.1em}
+
+.coord{font-size:.9rem; color:var(--muted); text-align:center}
+.coord b{font-family:var(--font-num); font-weight:600; color:var(--ink); font-variant-numeric:tabular-nums}
+.help{font-size:.8rem; color:var(--muted); margin:0; text-align:center}
+kbd{font-family:var(--font-num); font-size:.75rem; border:1px solid var(--line); border-radius:4px; padding:0 4px; background:var(--surface)}
+
+@media (min-width:520px){
+  .val{grid-template-columns:5rem 1fr auto}
+}
+.main{display:flex; flex-direction:column; gap:16px}
+/* パソコン・タブレット横向き：単位円の右に値を並べる */
+@media (min-width:860px){
+  .wrap{max-width:1080px}
+  .main{display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:20px; align-items:start}
+  svg#circle{max-height:calc(100dvh - 190px); margin-inline:auto}
+  .readout{position:sticky; top:calc(env(safe-area-inset-top, 0px) + 12px)}
+  .help{text-align:left}
+}
+@media (prefers-reduced-motion: reduce){
+  #pulse.go{animation:none}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>単位円で三角比</h1>
+    <p class="lead">点Pをドラッグすると、その角度の sin・cos・tan がすぐ下に表示されます。</p>
+  </header>
+
+  <div class="controls">
+    <div>
+      <span class="ctl-label">ロック</span>
+      <div class="seg" role="group" aria-label="ロックする角度">
+        <button type="button" id="m-both" data-mode="both" aria-pressed="true">30°+45°</button>
+        <button type="button" id="m-30" data-mode="30" aria-pressed="false">30°</button>
+        <button type="button" id="m-45" data-mode="45" aria-pressed="false">45°</button>
+        <button type="button" id="m-off" data-mode="off" aria-pressed="false">なし</button>
+      </div>
+    </div>
+    <label class="sound"><input type="checkbox" id="sound"> カチッ音</label>
+  </div>
+
+  <div class="main">
+  <div class="stage">
+    <svg id="circle" viewBox="-195 -195 390 390" aria-label="単位円">
+      <defs>
+        <clipPath id="clip"><rect x="-195" y="-195" width="390" height="390"/></clipPath>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/>
+        </marker>
+      </defs>
+      <g id="grid"></g>
+      <!-- 軸 -->
+      <line x1="-182" y1="0" x2="182" y2="0" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="0" y1="182" x2="0" y2="-182" stroke="var(--muted)" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <text x="178" y="18" font-size="15" font-style="italic" fill="var(--muted)">x</text>
+      <text x="8" y="-176" font-size="15" font-style="italic" fill="var(--muted)">y</text>
+      <text x="-14" y="16" font-size="14" font-style="italic" fill="var(--muted)">O</text>
+      <text x="143" y="16" font-size="13" fill="var(--muted)">1</text>
+      <text x="-158" y="16" font-size="13" fill="var(--muted)">−1</text>
+      <text x="5" y="-143" font-size="13" fill="var(--muted)">1</text>
+      <text x="5" y="155" font-size="13" fill="var(--muted)">−1</text>
+      <!-- x=1 の接線 -->
+      <line x1="140" y1="-195" x2="140" y2="195" stroke="var(--tan)" stroke-width="1" stroke-dasharray="3 4" opacity=".5"/>
+      <!-- 単位円 -->
+      <circle cx="0" cy="0" r="140" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+      <g id="ticks"></g>
+      <g clip-path="url(#clip)">
+        <line id="tanRay" stroke="var(--tan)" stroke-width="1.2" stroke-dasharray="5 4"/>
+        <line id="tanSeg" stroke="var(--tan)" stroke-width="4" stroke-linecap="round"/>
+        <circle id="tanPt" r="4" fill="var(--tan)"/>
+      </g>
+      <path id="arc" fill="none" stroke="var(--point)" stroke-width="1.6"/>
+      <text id="arcLabel" font-size="15" font-style="italic" fill="var(--point)">θ</text>
+      <line id="radius" x1="0" y1="0" stroke="var(--ink)" stroke-width="1.8"/>
+      <line id="cosSeg" x1="0" y1="0" y2="0" stroke="var(--cos)" stroke-width="5" stroke-linecap="round"/>
+      <line id="sinSeg" stroke="var(--sin)" stroke-width="5" stroke-linecap="round"/>
+      <text id="pLabel" font-size="15" font-style="italic" fill="var(--ink)">P</text>
+      <g id="handle" tabindex="0" role="slider" aria-label="角度θ" aria-valuemin="0" aria-valuemax="360">
+        <circle id="pulse" r="10" fill="none" stroke="var(--point)" stroke-width="2"/>
+        <circle class="focus" r="17" fill="none" opacity="0"/>
+        <circle id="hit" r="22" fill="transparent"/>
+        <circle id="dot" r="9" fill="var(--point)" stroke="var(--surface)" stroke-width="2.5"/>
+      </g>
+    </svg>
+  </div>
+
+  <section class="readout" aria-live="polite">
+    <div class="angle-row">
+      <span class="angle-main"><i>θ</i> = <span id="degTxt">30°</span></span>
+      <span class="angle-rad" id="radTxt"></span>
+      <span class="badge" id="badge">ロック中</span>
+    </div>
+    <div class="vals">
+      <div class="val sin">
+        <span class="name">sin<i>θ</i></span>
+        <span class="exact" id="sinEx"></span>
+        <span class="dec" id="sinDec"></span>
+        <span class="hint">点Pの y 座標（赤い線の長さ）</span>
+      </div>
+      <div class="val cos">
+        <span class="name">cos<i>θ</i></span>
+        <span class="exact" id="cosEx"></span>
+        <span class="dec" id="cosDec"></span>
+        <span class="hint">点Pの x 座標（青い線の長さ）</span>
+      </div>
+      <div class="val tan">
+        <span class="name">tan<i>θ</i></span>
+        <span class="exact" id="tanEx"></span>
+        <span class="dec" id="tanDec"></span>
+        <span class="hint">直線OPの傾き ＝ 直線 x = 1 との交点の y 座標（緑の線）</span>
+      </div>
+    </div>
+    <div class="coord">P = (cos<i>θ</i>, sin<i>θ</i>) = <b id="pCoord"></b></div>
+  </section>
+  </div>
+  <p class="help">円のどこをタップしても点が移動します。キーボードでは <kbd>←</kbd><kbd>→</kbd> で1°、<kbd>Shift</kbd>を押しながらで15°ずつ動きます。</p>
+</div>
+
+<script>
+(function(){
+  const R = 140, SNAP_TH = 5;
+  const $ = id => document.getElementById(id);
+  const svg = $('circle'), NS = 'http://www.w3.org/2000/svg';
+  let deg = 30, mode = 'both', locked = false, dragging = false;
+
+  // 方眼
+  const grid = $('grid');
+  for (let v = -175; v <= 175; v += 35) {
+    if (v === 0) continue;
+    const strong = v % 70 === 0;
+    for (const [x1,y1,x2,y2] of [[v,-195,v,195],[-195,v,195,v]]) {
+      const l = document.createElementNS(NS,'line');
+      l.setAttribute('x1',x1); l.setAttribute('y1',y1); l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+      l.setAttribute('stroke', strong ? 'var(--grid-strong)' : 'var(--grid)');
+      l.setAttribute('stroke-width','1');
+      grid.appendChild(l);
+    }
+  }
+
+  function candidates(){
+    const s = new Set();
+    if (mode === 'both' || mode === '30') for (let a = 0; a < 360; a += 30) s.add(a);
+    if (mode === 'both' || mode === '45') for (let a = 0; a < 360; a += 45) s.add(a);
+    return [...s].sort((a,b)=>a-b);
+  }
+  let cands = candidates();
+
+  function drawTicks(){
+    const g = $('ticks'); g.innerHTML = '';
+    for (const a of cands) {
+      const r = a * Math.PI / 180;
+      const c = document.createElementNS(NS,'circle');
+      c.setAttribute('cx', (R*Math.cos(r)).toFixed(2));
+      c.setAttribute('cy', (-R*Math.sin(r)).toFixed(2));
+      c.setAttribute('r', a % 90 === 0 ? 3.5 : 3);
+      c.setAttribute('fill','var(--surface)');
+      c.setAttribute('stroke','var(--ink)');
+      c.setAttribute('stroke-width','1.4');
+      g.appendChild(c);
+      const t = document.createElementNS(NS,'text');
+      const lr = R + 15;
+      t.setAttribute('x', (lr*Math.cos(r)).toFixed(1));
+      t.setAttribute('y', (-lr*Math.sin(r) + 4).toFixed(1));
+      t.setAttribute('font-size','10');
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('fill','var(--muted)');
+      t.setAttribute('font-family','JetBrains Mono, monospace');
+      if (a % 90 !== 0) { t.textContent = a + '°'; g.appendChild(t); }
+    }
+  }
+
+  function snap(a){
+    let best = null, bd = Infinity;
+    for (const c of cands) {
+      let d = Math.abs(a - c); d = Math.min(d, 360 - d);
+      if (d < bd) { bd = d; best = c; }
+    }
+    if (best !== null && bd <= SNAP_TH) return { a: best, lock: true };
+    return { a, lock: false };
+  }
+
+  // 正確な値
+  const SIN_REF = { 0:'0', 30:['1','2'], 45:['√2','2'], 60:['√3','2'], 90:'1' };
+  const TAN_REF = { 0:'0', 30:['1','√3'], 45:'1', 60:'√3', 90:null };
+  function refAngle(d){
+    if (d <= 90) return d; if (d <= 180) return 180 - d; if (d <= 270) return d - 180; return 360 - d;
+  }
+  function fmt(v, neg){
+    if (v === null) return '<span class="muted" style="font-family:var(--font-ui);font-size:.95rem">定義されない</span>';
+    if (v === '0') return '0';
+    const s = neg ? '<span class="sign">−</span>' : '';
+    if (Array.isArray(v)) return s + '<span class="frac"><span>' + v[0] + '</span><span>' + v[1] + '</span></span>';
+    return s + v;
+  }
+  function gcd(a,b){ return b ? gcd(b, a % b) : a; }
+  function radStr(d){
+    if (d === 0) return '0';
+    const g = gcd(d,180), n = d/g, den = 180/g;
+    const num = (n === 1 ? '' : n) + 'π';
+    return den === 1 ? num : '<span class="frac"><span>' + num + '</span><span>' + den + '</span></span>';
+  }
+  const num = v => (v < -0.00005 ? '−' : ' ') + Math.abs(v).toFixed(4);
+
+  // カチッ音
+  let actx = null;
+  function click(){
+    if (!$('sound').checked) return;
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+      o.type = 'square'; o.frequency.setValueAtTime(1800, t); o.frequency.exponentialRampToValueAtTime(600, t + 0.03);
+      g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t + 0.06);
+    } catch(e) {}
+  }
+  function pulse(){
+    const p = $('pulse'); p.classList.remove('go'); void p.getBBox(); p.classList.add('go');
+  }
+
+  function setAngle(a, isLocked){
+    a = ((a % 360) + 360) % 360;
+    if (isLocked) a = Math.round(a) % 360;
+    const wasLocked = locked;
+    const prevDeg = deg;
+    deg = a; locked = isLocked;
+    if (locked && (!wasLocked || prevDeg !== deg)) { pulse(); click(); }
+    render();
+  }
+
+  function render(){
+    const r = deg * Math.PI / 180;
+    let c = Math.cos(r), s = Math.sin(r);
+    if (locked) { if (Math.abs(c) < 1e-12) c = 0; if (Math.abs(s) < 1e-12) s = 0; }
+    const px = R*c, py = -R*s;
+
+    $('handle').setAttribute('transform', `translate(${px.toFixed(2)} ${py.toFixed(2)})`);
+    $('radius').setAttribute('x2', px); $('radius').setAttribute('y2', py);
+    $('cosSeg').setAttribute('x2', px);
+    const sinSeg = $('sinSeg');
+    sinSeg.setAttribute('x1', px); sinSeg.setAttribute('y1', 0); sinSeg.setAttribute('x2', px); sinSeg.setAttribute('y2', py);
+
+    // P のラベル
+    const lp = R + 26;
+    $('pLabel').setAttribute('x', (lp*c - 5).toFixed(1));
+    $('pLabel').setAttribute('y', (-lp*s + 5).toFixed(1));
+
+    // 角度の弧
+    const ar = 28;
+    if (deg < 0.05) { $('arc').setAttribute('d',''); $('arcLabel').setAttribute('opacity','0'); }
+    else {
+      const ex = ar*c, ey = -ar*s, large = deg > 180 ? 1 : 0;
+      $('arc').setAttribute('d', `M ${ar} 0 A ${ar} ${ar} 0 ${large} 0 ${ex.toFixed(2)} ${ey.toFixed(2)}`);
+      const mid = r / 2, lr = 42;
+      $('arcLabel').setAttribute('x', (lr*Math.cos(mid) - 4).toFixed(1));
+      $('arcLabel').setAttribute('y', (-lr*Math.sin(mid) + 5).toFixed(1));
+      $('arcLabel').setAttribute('opacity','1');
+    }
+
+    // tan
+    const tanDefined = Math.abs(c) > 1e-9;
+    const t = tanDefined ? s / c : NaN;
+    if (tanDefined) {
+      const ty = Math.max(-5000, Math.min(5000, -R*t));
+      // OP を延長（cos<0 のときは原点の反対側へ伸ばす）
+      $('tanRay').setAttribute('x1', c >= 0 ? 0 : px); $('tanRay').setAttribute('y1', c >= 0 ? 0 : py);
+      $('tanRay').setAttribute('x2', R); $('tanRay').setAttribute('y2', ty);
+      $('tanSeg').setAttribute('x1', R); $('tanSeg').setAttribute('y1', 0);
+      $('tanSeg').setAttribute('x2', R); $('tanSeg').setAttribute('y2', ty);
+      $('tanPt').setAttribute('cx', R); $('tanPt').setAttribute('cy', ty);
+      for (const id of ['tanRay','tanSeg','tanPt']) $(id).setAttribute('opacity','1');
+    } else {
+      for (const id of ['tanRay','tanSeg','tanPt']) $(id).setAttribute('opacity','0');
+    }
+
+    // 角度表示
+    $('degTxt').textContent = locked ? deg + '°' : deg.toFixed(1) + '°';
+    $('radTxt').innerHTML = locked ? '= ' + radStr(deg) : '≈ ' + r.toFixed(3) + ' rad';
+    $('handle').setAttribute('aria-valuenow', Math.round(deg));
+    $('handle').setAttribute('aria-valuetext', (locked ? deg : deg.toFixed(1)) + '度');
+    $('badge').classList.toggle('on', locked);
+    $('badge').textContent = locked ? 'ロック中' : '自由';
+
+    // 値
+    if (locked) {
+      const ra = refAngle(deg);
+      $('sinEx').innerHTML = fmt(SIN_REF[ra], s < 0);
+      $('cosEx').innerHTML = fmt(SIN_REF[90 - ra], c < 0);
+      $('tanEx').innerHTML = fmt(TAN_REF[ra], s * c < 0);
+    } else {
+      $('sinEx').innerHTML = $('cosEx').innerHTML = $('tanEx').innerHTML = '<span class="muted" style="font-size:.95rem">—</span>';
+    }
+    $('sinDec').textContent = '≈' + num(s);
+    $('cosDec').textContent = '≈' + num(c);
+    $('tanDec').textContent = tanDefined ? (Math.abs(t) > 9999 ? (t > 0 ? '+∞に近い' : '−∞に近い') : '≈' + num(t)) : '—';
+    $('pCoord').textContent = `(${(c < -0.00005 ? '−' : '') + Math.abs(c).toFixed(3)}, ${(s < -0.00005 ? '−' : '') + Math.abs(s).toFixed(3)})`;
+  }
+
+  // ドラッグ
+  function angleFrom(e){
+    const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    let a = Math.atan2(-p.y, p.x) * 180 / Math.PI;
+    if (a < 0) a += 360;
+    return a;
+  }
+  function move(e){ const sres = snap(angleFrom(e)); setAngle(sres.a, sres.lock); }
+  svg.addEventListener('pointerdown', e => {
+    dragging = true; svg.setPointerCapture(e.pointerId); document.body.classList.add('dragging');
+    move(e); e.preventDefault();
+  });
+  svg.addEventListener('pointermove', e => { if (dragging) move(e); });
+  const end = () => { dragging = false; document.body.classList.remove('dragging'); };
+  svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+
+  // キーボード
+  $('handle').addEventListener('keydown', e => {
+    const step = e.shiftKey ? 15 : 1;
+    let d = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') d = step;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') d = -step;
+    if (d === null) return;
+    e.preventDefault();
+    const target = (Math.round(deg) + d + 360) % 360;
+    setAngle(target, cands.includes(target));
+  });
+
+  // モード切替
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    mode = b.dataset.mode;
+    document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    cands = candidates(); drawTicks();
+    const sres = snap(deg); locked = false; setAngle(sres.a, sres.lock);
+  }));
+
+  drawTicks();
+  deg = 30; locked = true; render();
+})();
+</script>
+
+</body></html>
